@@ -39,9 +39,9 @@ tmux bind-key -T prefix Q run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy
 tmux bind-key -T prefix C-q run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy"
 
 # URL-only quickcopy
-tmux bind-key -T prefix C-u run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy --options-prefix @copytk-urls-"
+tmux bind-key -T prefix u run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy --options-prefix @copytk-urls-"
 # Path-only quickcopy
-tmux bind-key -T prefix C-f run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy --options-prefix @copytk-paths-"
+tmux bind-key -T prefix f run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy --options-prefix @copytk-paths-"
 
 # tmux prefix: quickopen action bindings
 tmux bind-key -T prefix P run-shell -b "python3 $CURRENT_DIR/copytk.py quickopen"
@@ -67,9 +67,8 @@ tmux set -g @copytk-quickcopy-match-1-2 '(?:^|\W)([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{
 tmux set -g @copytk-urls-match-0-0 urls
 
 # Path-only quickcopy (prefix+C-f)
-tmux set -g @copytk-paths-match-0-0 abspaths
-tmux set -g @copytk-paths-match-1-0 paths
-tmux set -g @copytk-paths-match-1-1 filenames
+# Only match paths with a clear prefix: ../ ./ / ~/
+tmux set -g @copytk-paths-match-0-0 '(?:^|[\s:=({])((?:\.\./|\./|~/|/)[\w.@+:-]+(?:/[\w.@+:-]*)*)'
 
 # Matches for quickopen
 tmux set -g @copytk-quickopen-match-0-0 urls

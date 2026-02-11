@@ -13,11 +13,75 @@ import math
 import subprocess
 import shutil
 from datetime import datetime
+import unicodedata
 import time
 import platform
 
 #logdir = '/tmp/copytklog'
 logdir = None
+
+def char_display_width(c):
+	"""Return the terminal display width of a character (1 or 2 cells)."""
+	if not c.isprintable():
+		return 0
+	eaw = unicodedata.east_asian_width(c)
+	if eaw in ('W', 'F'):
+		return 2
+	# Emojis and symbols above U+2600 are typically rendered as 2 cells
+	if ord(c) >= 0x2600 and unicodedata.category(c) in ('So', 'Sk'):
+		return 2
+	return 1
+
+def str_display_width(s):
+	"""Return the total display width of a string in terminal cells."""
+	return sum(char_display_width(c) for c in s)
+
+def truncate_to_display_width(s, width):
+	"""Truncate string to fit within given display width. Returns (truncated_str, display_width)."""
+	w = 0
+	for i, c in enumerate(s):
+		cw = char_display_width(c)
+		if w + cw > width:
+			return s[:i], w
+		w += cw
+	return s, w
+
+def _is_curses_safe(c):
+	"""Check if a character can be safely rendered by curses."""
+	cp = ord(c)
+	# ASCII is always safe
+	if cp < 128:
+		return True
+	cat = unicodedata.category(c)
+	# Private Use Area (Nerd Font icons etc.) — curses often drops these
+	if cat == 'Co':
+		return False
+	# Emojis and misc symbols — curses often can't render these
+	if cp >= 0x2600 and cat in ('So', 'Sk'):
+		return False
+	# East Asian Wide/Fullwidth — replace to avoid width mismatches
+	if unicodedata.east_asian_width(c) in ('W', 'F'):
+		return False
+	# Box-drawing, arrows, math symbols etc. are generally fine
+	return True
+
+def make_display_safe(s, width):
+	"""Replace chars that curses can't render with placeholders, truncate to width."""
+	result = []
+	w = 0
+	for c in s:
+		cw = char_display_width(c)
+		if w + cw > width:
+			break
+		if not _is_curses_safe(c):
+			# Replace with spaces matching the character's display width
+			result.append(' ' * cw)
+		else:
+			result.append(c)
+		w += cw
+	# Pad remaining width with spaces
+	result.append(' ' * (width - w))
+	return ''.join(result)
 
 python_command = 'python3'
 # Find full path to tmux command so it can be invoked without a shell
@@ -210,7 +274,7 @@ def get_tmux_option_key_curses(name, default=None, optmode='g', aslist=False):
 	else:
 		return remap.get(v, v)
 
-def get_tmux_option_color_pair_curses(name, default_fg=-1, default_bg=-1):
+def _parse_color(s, default=-1):
 	strmap = {
 		'none': -1,
 		'black': curses.COLOR_BLACK,
@@ -222,19 +286,21 @@ def get_tmux_option_color_pair_curses(name, default_fg=-1, default_bg=-1):
 		'cyan': curses.COLOR_CYAN,
 		'white': curses.COLOR_WHITE
 	}
+	s = s.strip().lower()
+	if s in strmap:
+		return strmap[s]
+	try:
+		return int(s)
+	except ValueError:
+		raise Exception(f'Invalid color {s}. Use a name (red, green, ...) or a number (0-255).')
+
+def get_tmux_option_color_pair_curses(name, default_fg=-1, default_bg=-1):
 	v = get_tmux_option(name)
 	if v == None:
 		return (default_fg, default_bg)
-	parts = v.lower().split(':')
-	if parts[0] not in strmap:
-		raise Exception(f'Invalid color {parts[0]}')
-	fg = strmap[parts[0]]
-	if len(parts) > 1:
-		if parts[1] not in strmap:
-			raise Exception(f'Invalid color {parts[1]}')
-		bg = strmap[parts[1]]
-	else:
-		bg = default_bg
+	parts = v.split(':')
+	fg = _parse_color(parts[0], default_fg)
+	bg = _parse_color(parts[1], default_bg) if len(parts) > 1 else default_bg
 	return (fg, bg)
 
 def capture_pane_contents(target=None, opts=None):
@@ -396,7 +462,7 @@ def process_pane_capture_lines(data, nlines=None):
 	lines = [
 		''.join([
 			'        ' if c == '\t' else (
-				c if c.isprintable() else ''
+				c if c.isprintable() else ' '
 			)
 			for c in line
 		])
@@ -409,7 +475,7 @@ def process_pane_capture_lines(data, nlines=None):
 def process_pane_capture_line(line):
 	return ''.join([
 		'        ' if c == '\t' else (
-			c if c.isprintable() else ''
+			c if c.isprintable() else ' '
 		)
 		for c in line
 	])
@@ -648,7 +714,7 @@ class PaneJumpAction:
 		line_width = min(self.curses_size[1], self.orig_pane['pane_size'][0])
 		max_line = min(self.curses_size[0], len(self.display_content_lines))
 		for i in range(max_line):
-			line = self.display_content_lines[i][:line_width].ljust(self.curses_size[0])
+			line = make_display_safe(self.display_content_lines[i], line_width)
 			self.addstr(i, 0, line)
 
 	def _redraw_highlight_ranges(self):
