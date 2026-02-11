@@ -67,8 +67,11 @@ tmux set -g @copytk-quickcopy-match-1-2 '(?:^|\W)([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{
 tmux set -g @copytk-urls-match-0-0 urls
 
 # Path-only quickcopy (prefix+C-f)
-# Only match paths with a clear prefix: ../ ./ / ~/
-tmux set -g @copytk-paths-match-0-0 '(?:^|[\s:=({])((?:\.\./|\./|~/|/)[\w.@+:-]+(?:/[\w.@+:-]*)*)'
+# Tier 0: paths with a clear prefix: ../ ./ / ~/ or dotfile-relative (.config/...)
+tmux set -g @copytk-paths-match-0-0 '(?:^|[\s:=({])((?:\.\./|\./|~/|/|\.[a-zA-Z][\w.-]*/)[\w.@+:-]+(?:/[\w.@+:-]*)*)'
+# Tier 1: relative paths — 2+ slashes (a/b/c) or 1 slash + file extension (dir/file.ext)
+tmux set -g @copytk-paths-match-1-0 '(?:^|[\s:=({])([\w][\w.-]*/[\w.@+:-]+(?:/[\w.@+:-]+)+)'
+tmux set -g @copytk-paths-match-1-1 '(?:^|[\s:=({])([\w][\w.-]*/[\w@+.-]*\.\w+)'
 
 # Matches for quickopen
 tmux set -g @copytk-quickopen-match-0-0 urls
