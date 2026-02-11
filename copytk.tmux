@@ -38,6 +38,11 @@ tmux bind-key -T prefix C-w run-shell -b "python3 $CURRENT_DIR/copytk.py linecop
 tmux bind-key -T prefix Q run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy"
 tmux bind-key -T prefix C-q run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy"
 
+# URL-only quickcopy
+tmux bind-key -T prefix C-u run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy --options-prefix @copytk-urls-"
+# Path-only quickcopy
+tmux bind-key -T prefix C-f run-shell -b "python3 $CURRENT_DIR/copytk.py quickcopy --options-prefix @copytk-paths-"
+
 # tmux prefix: quickopen action bindings
 tmux bind-key -T prefix P run-shell -b "python3 $CURRENT_DIR/copytk.py quickopen"
 tmux bind-key -T prefix C-p run-shell -b "python3 $CURRENT_DIR/copytk.py quickopen"
@@ -51,23 +56,20 @@ fi
 
 if [ $NOMATCHES -eq 0 ]; then
 
-# Match URLs
+# Default quickcopy (prefix+Q): URLs + paths + IPs
 tmux set -g @copytk-quickcopy-match-0-0 urls
-# Match paths and filenames
 tmux set -g @copytk-quickcopy-match-0-1 abspaths
 tmux set -g @copytk-quickcopy-match-1-0 paths
 tmux set -g @copytk-quickcopy-match-1-1 filenames
-# Match IP addrs
 tmux set -g @copytk-quickcopy-match-1-2 '(?:^|\W)([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})(?:$|\W)'
-# Match commands after the prompt
-tmux set -g @copytk-quickcopy-match-2-0 '(?m)^[^\n]{0,80}\$ ([a-zA-Z][a-zA-Z0-9_-]*(?: [^\n]*)?)$'
-# Match numbers
-tmux set -g @copytk-quickcopy-match-3-0 '-?[0-9]+(?:\.[0-9]+)?(?:[eE]-?[0-9]+)?'
-# Match quote-enclosed strings
-tmux set -g @copytk-quickcopy-match-3-1 '"([^"\n]*)"'
-tmux set -g @copytk-quickcopy-match-3-2 ''\''([^'\'\\'n]*)'\'
-# Match whole lines
-tmux set -g @copytk-quickcopy-match-4-0 lines
+
+# URL-only quickcopy (prefix+C-u)
+tmux set -g @copytk-urls-match-0-0 urls
+
+# Path-only quickcopy (prefix+C-f)
+tmux set -g @copytk-paths-match-0-0 abspaths
+tmux set -g @copytk-paths-match-1-0 paths
+tmux set -g @copytk-paths-match-1-1 filenames
 
 # Matches for quickopen
 tmux set -g @copytk-quickopen-match-0-0 urls

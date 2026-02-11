@@ -1281,7 +1281,8 @@ def run_linecopy(stdscr):
 	LineCopyAction(stdscr).run()
 
 def run_quickcopy(stdscr):
-	QuickCopyAction(stdscr).run()
+	prefix = args.options_prefix or '@copytk-quickcopy-'
+	QuickCopyAction(stdscr, options_prefix=prefix).run()
 
 def run_quickopen(stdscr):
 	QuickOpenAction(stdscr).run()
@@ -1325,6 +1326,8 @@ def run_wrapper(main_action, args):
 		addopt('--search-nkeys', args.search_nkeys)
 	if args.search_direction:
 		addopt('--search-direction', args.search_direction)
+	if args.options_prefix:
+		addopt('--options-prefix', args.options_prefix)
 
 	cmd += f' "{main_action}"'
 	#cmd += ' 2>/tmp/tm_wrap_log'
@@ -1340,6 +1343,7 @@ argp = argparse.ArgumentParser(description='tmux pane utils')
 argp.add_argument('-t', help='target pane')
 argp.add_argument('--search-nkeys', help='number of characters to key in to search')
 argp.add_argument('--search-direction', help='direction to search from cursor, both|forward|reverse')
+argp.add_argument('--options-prefix', help='tmux options prefix for match patterns (e.g. @copytk-quickcopy-urls-)')
 
 # internal args
 argp.add_argument('--run-internal', action='store_true')
